@@ -117,5 +117,107 @@ INSERT INTO KETQUA(MaSV, MaMH, Diem) VALUES
 
 -- DATA QUERY
 -- 1.Cho biết mã môn học, tên môn học,  điểm thi  tất cả các môn của sinh viên tên Thức
-SELECT MaMH, TenMH, Diem FROM MONHOC * KETQUA
+select MonHoc.MaMH, TenMH, Diem 
+from MonHoc join KETQUA on MONHOC.MaMH=KetQua.MaMH
+			join SINHVIEN on SINHVIEN.MaSV = KetQua.MaSV
+where TenSV like N'%Thức'
+
+
+-- 2.Cho biết mã môn học, tên môn và điểm thi ở những môn mà sinh viên tên Dung phải thi lại (điểm<5)
+select MonHoc.MaMH, TenMH, Diem 
+from MONHOC join KETQUA on MONHOC.MaMH = KETQUA.MaMH
+where Diem<5 and MaSV = (select MaSV from sinhvien where TenSV like N'%Dung')
+
+-- 3.Cho biết mã sinh viên, tên những sinh viên đã thi ít nhất là 1 trong 3 môn Lý thuyết Cơ sở dữ liệu, Tin học đại cương, mạng máy tính.
+select MaSV, TenSV 
+from SINHVIEN 
+where MaSV in (select distinct MaSV from KETQUA where Diem is not null)
+
+-- 4. Cho biết mã môn học, tên môn mà sinh viên có mã số 1 chưa có điểm
+
+	(select MaMH from MONHOC 
+	except
+	select MaMH from KETQUA where MaSV=3)
+
+-- 5. Cho biết điểm cao nhất môn 1 mà các sinh viên đạt được
+select max(Diem) as 'Max Diem' from KETQUA where MaMH=1
+
+-- 6. Cho biết mã sinh viên, tên những sinh viên có điểm thi môn 2 không thấp nhất khoa
+select MaSV, TenSV from SINHVIEN where MaSV in
+	(select MaSV from KETQUA where Diem >
+	-- Tìm điểm thi môn 2 thấp nhất khoa
+		(select min(Diem) from KETQUA where MaMH=2) and MaMH=2)
+
+-- 7. Cho biết mã sinh viên và tên những sinh viên có điểm thi môn 1 lớn hơn điểm thi môn 1 của sinh viên có mã số 3
+select MaSV, TenSV from SINHVIEN where MaSV in 
+	-- Tìm Mã sinh viên của những sv có điểm thi môn 1 lớn hơn ...
+	(select MaSV from KETQUA where MaMH=1 and Diem>
+	-- Tìm điểm thi môn 1 của sv có mã số 3
+		(select Diem from KETQUA where MaSV=3 and MaMH=1))
+
+-- 8. Cho biết số sinh viên phải thi lại môn Toán Cao cấp 
+select count(MaSV) as 'Số lượng sv thi lại' from Ketqua where Diem<4 and MaMH=
+	-- Tìm MaMH môn Toán Cao Cấp
+	(select MaMH from MONHOC where TenMH like N'Toán Cao Cấp')
+
+-- 9. Đối với mỗi môn, cho biết tên môn và số sinh viên phải thi lại môn đó mà số sinh viên thi lại >=2
+select MaMH, count(Diem)as N'Số sinh viên thi lại' from Ketqua 
+where Diem<4
+group by MaMH
+having count(Diem) > 1
+
+-- 10. Cho biết mã sinh viên, tên và lớp của sinh viên đạt điểm cao nhất môn Tin đại cương
+select SinhVien.MaSV, TenSV, Lop from SINHVIEN join KETQUA on SINHVIEN.MaSV=KETQUA.MaSV
+where Diem=
+	-- Tìm điểm cao nhất tin đại cương
+	(select MAX(Diem) from KETQUA 
+	where MaMH = (select MaMH from MONHOC
+					where TenMH like N'Tin đại cương'))
+
+-- 11. Đối với mỗi lớp, lập bảng điểm gồm mã sinh viên, tên sinh viên và điểm trung bình chung học tập. 
+select KETQUA.MaSV, TenSV, AVG(Diem) as N'Điểm trung bình' 
+from SINHVIEN join KETQUA on SINHVIEN.MaSV = KETQUA.MaSV
+group by KETQUA.MaSV, TenSV
+
+--12. Đối với mỗi lớp, cho biết mã sinh viên và tên những sinh viên phải thi lại từ 2 môn trở lên
+select SinhVien.MaSV, TenSV, count(Diem) as N'Số môn thi lại' 
+from KETQUA join SINHVIEN on KETQUA.MaSV=SINHVIEN.MaSV
+where Diem<4
+group by SinhVien.MaSV, TenSV
+having count(Diem)>=2
+
+-- 13. Cho biết mã số và tên của những sinh viên tham gia thi tất cả các môn.
+select KETQUA.MaSV, TenSV from SINHVIEN
+join KETQUA on SINHVIEN.MaSV=KETQUA.MaSV
+group by KETQUA.MaSV, TenSV
+having count(Diem)>2
+
+-- 14. Cho biết mã sinh viên và tên của sinh viên có điểm trung bình chung học tập >=6
+select KETQUA.MaSV, TenSV from SINHVIEN
+join KETQUA on SINHVIEN.MaSV=KETQUA.MaSV
+group by KETQUA.MaSV, TenSV
+having AVG(Diem)>=6
+
+-- 15. Cho biết mã sinh viên và tên những sinh viên phải thi lại ở ít nhất là những môn mà sinh viên có mã số 3 phải thi lại
+/* select KETQUA.MaSV, TenSV from KETQUA
+
+	-- Những môn sinh viên có mã số 3 phải thi lại
+	(select MaSV from KETQUA where MaSV=3 and Diem<4) */
+
+-- 16. Cho mã sv và tên của những sinh viên có hơn nửa số điểm  >=5. 
+
+
+-- 17. Cho danh sách tên và mã sinh viên có điểm trung bình chung lớn hơn điểm trung bình của toàn khóa
+select MaSV, TenSV from SINHVIEN 
+
+-- 18. Cho danh sách mã sinh viên, tên sinh viên có điểm cao nhất của mỗi lớp
+select MaSV, TenSV from SINHVIEN
+
+select max(Diem) from KETQUA
+
+
+
+-- 19. Cho danh sách tên và mã sinh viên có điểm trung bình chung lớn hơn điểm trung bình của lớp sinh viên đó theo học.
+
+
 
